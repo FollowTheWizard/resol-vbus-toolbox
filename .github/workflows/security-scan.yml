@@ -1,0 +1,100 @@
+name: Security scan (Dockerfile, deps, image)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ secrets.IMAGE_NAME }}   # e.g. yourdockerhubuser/resol-vbus-toolbox
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Hadolint Dockerfile lint
+        uses: hadolint/hadolint-action@v2
+        with:
+          dockerfile: Dockerfile
+
+      - name: Node install (for audit)
+        run: |
+          npm ci
+
+      - name: NPM audit (fail on high/critical)
+        id: npm_audit
+        run: |
+          # output JSON to file and fail if high/critical found
+          npm audit --json > npm-audit.json || true
+          jq '.metadata.vulnerabilities' npm-audit.json > vuln-summary.json
+          cat vuln-summary.json
+          CRITICAL=$(jq '.critical' vuln-summary.json)
+          HIGH=$(jq '.high' vuln-summary.json)
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          if [ "$CRITICAL" -gt "0" ] || [ "$HIGH" -gt "0" ]; then
+            echo "Found high/critical npm vulnerabilities"
+            exit 1
+          fi
+
+      - name: Set up QEMU (for cross-build) and Buildx
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image (local tag)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:ci-${{ github.sha }}
+          # Optional multi-arch:
+          # platforms: linux/amd64,linux/arm64,linux/arm/v7
+
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@v1
+        # using the action below will run trivy scan in the next step
+
+      - name: Trivy image scan (fail on HIGH/CRITICAL)
+        id: trivy_scan
+        run: |
+          IMAGE=${{ env.IMAGE_NAME }}:ci-${{ github.sha }}
+          # If image is private in Docker Hub, use docker login (done above)
+          # Run trivy and fail if high/critical found
+          trivy image --severity CRITICAL,HIGH --format json --output trivy-report.json ${IMAGE} || true
+          cat trivy-report.json
+          # Count vulnerabilities:
+          CRITICAL=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-report.json)
+          HIGH=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-report.json)
+          echo "critical=${CRITICAL}" >> $GITHUB_OUTPUT
+          echo "high=${HIGH}" >> $GITHUB_OUTPUT
+          if [ "$CRITICAL" -gt "0" ] || [ "$HIGH" -gt "0" ]; then
+            echo "Trivy found high/critical vulnerabilities (CRITICAL=$CRITICAL HIGH=$HIGH)"
+            exit 1
+          fi
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            npm-audit.json
+            trivy-report.json
