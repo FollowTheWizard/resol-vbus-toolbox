@@ -1,5 +1,5 @@
 # Use Node 18 on Debian trixie slim
-FROM node:18-trixie-slim
+FROM node:18-slim
 
 # Install system deps commonly needed for native modules and USB access
 RUN apt-get update && apt-get install -y --no-install-recommends \
