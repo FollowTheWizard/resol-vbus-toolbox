@@ -10,7 +10,7 @@
   "dependencies": {
     "mqtt": "^5.8.0",
     "resol-vbus": "^0.29.0",
-    "server": "^1.0.39"
+    "server": "^0.0.3"
   },
   "devDependencies": {
     "eslint": "^8.52.0",
