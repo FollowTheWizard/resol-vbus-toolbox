@@ -7,8 +7,6 @@ services:
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
     environment:
-      # Connection settings
-      NODE_PATH: /app/src
       # MQTT URL - update to your broker address
       MQTT_URL: mqtt://192.168.178.243:1883
       # Optional MQTT credentials
@@ -16,7 +14,6 @@ services:
       # MQTT_PASSWORD: password
     command: >
       node /app/bin/resol-vbus-toolbox
-      --connection SerialConnection
       --path /dev/ttyACM0
       --script /app/scripts/mqtt-publisher.js
     restart: unless-stopped
