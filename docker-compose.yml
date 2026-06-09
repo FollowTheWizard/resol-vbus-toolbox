@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    environment:
+      - TZ=UTC
+
+  resol-vbus:
+    build: .
+    container_name: resol-vbus-mqtt
+    depends_on:
+      - mqtt
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    environment:
+      # USB device path (adjust if your device is /dev/ttyUSB1, /dev/ttyACM0, etc)
+      - VBUS_PATH=/dev/ttyUSB0
+      # MQTT connection settings
+      - MQTT_URL=mqtt://mqtt:1883
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mosquitto_data:
+  mosquitto_logs:
