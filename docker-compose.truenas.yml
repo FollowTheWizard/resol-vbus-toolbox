@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   resol-vbus:
-    image: docker.io/iVuehl/resol-vbus-toolbox:latest
+    image: docker.io/ivuehl/resol-vbus-toolbox:latest
     container_name: resol-vbus-mqtt
     devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyACM0:/dev/ttyACM0
     environment:
       # Connection settings
       NODE_PATH: /app/src
@@ -17,7 +17,7 @@ services:
     command: >
       node /app/bin/resol-vbus-toolbox
       --connection SerialConnection
-      --path /dev/ttyUSB0
+      --path /dev/ttyACM0
       --script /app/scripts/mqtt-publisher.js
     restart: unless-stopped
     tmpfs:
