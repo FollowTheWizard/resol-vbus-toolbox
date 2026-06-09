@@ -36,9 +36,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Use tini to handle signals properly
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# Default command - runs mqtt-publisher script with host, port, and credentials from env vars
+# Default command - runs mqtt-publisher script with USB serial path and MQTT credentials from env vars
 CMD ["node", "bin/resol-vbus-toolbox", \
-     "--host", "${VBUS_HOST:-192.168.178.200}", \
-     "--port", "${VBUS_PORT:-7053}", \
-     "--password", "${VBUS_PASSWORD:-vbus}", \
+     "--path", "${VBUS_PATH:-/dev/ttyUSB0}", \
      "--script", "scripts/mqtt-publisher.js"]
