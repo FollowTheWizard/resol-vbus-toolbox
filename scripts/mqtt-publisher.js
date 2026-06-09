@@ -3,13 +3,14 @@ const mqtt = require('mqtt');
 const config = $.getScriptConfig('mqtt-publisher', () => ({
 
     // URL to connect to the MQTT broker.
-    url: 'mqtt://127.0.0.1',
+    // Reads from MQTT_URL environment variable, defaults to mqtt://127.0.0.1
+    url: process.env.MQTT_URL || 'mqtt://127.0.0.1',
 
     // Additional options used to create the MQTT client. See
     // https://github.com/mqttjs/MQTT.js#client for details.
     mqttClientOptions: {
-        // username: '...',
-        // password: '...',
+        username: process.env.MQTT_USERNAME || undefined,
+        password: process.env.MQTT_PASSWORD || undefined,
     },
 
     // Publish interval in milliseconds.
