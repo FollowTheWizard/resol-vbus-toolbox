@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  resol-vbus:
+    image: iVuehl/resol-vbus-toolbox:latest
+    container_name: resol-vbus-mqtt
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    environment:
+      # USB device path
+      VBUS_PATH: /dev/ttyUSB0
+      # MQTT connection settings - adjust to your MQTT broker
+      MQTT_URL: mqtt://192.168.1.100:1883
+      # Optional: MQTT credentials if needed
+      # MQTT_USERNAME: username
+      # MQTT_PASSWORD: password
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
